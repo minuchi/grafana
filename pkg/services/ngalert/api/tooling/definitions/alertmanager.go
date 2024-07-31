@@ -992,3 +992,8 @@ type GettableGrafanaReceivers struct {
 }
 
 type EncryptFn func(ctx context.Context, payload []byte) ([]byte, error)
+
+type RoutingTree struct {
+	definition.Route
+	Version string `json:"version"`
+}
