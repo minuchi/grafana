@@ -21,8 +21,6 @@ import (
 
 // GrafanaAggregatorOptions contains the state for the aggregator apiserver
 type GrafanaAggregatorOptions struct {
-	ProxyClientCertFile string
-	ProxyClientKeyFile  string
 }
 
 func NewGrafanaAggregatorOptions() *GrafanaAggregatorOptions {
@@ -33,12 +31,7 @@ func (o *GrafanaAggregatorOptions) AddFlags(fs *pflag.FlagSet) {
 	if o == nil {
 		return
 	}
-
-	fs.StringVar(&o.ProxyClientCertFile, "dataplane-proxy-client-cert-file", o.ProxyClientCertFile,
-		"path to proxy client cert file")
-
-	fs.StringVar(&o.ProxyClientKeyFile, "dataplane-proxy-client-key-file", o.ProxyClientKeyFile,
-		"path to proxy client key file")
+	// TODO: do we need any CLI flags here?
 }
 
 func (o *GrafanaAggregatorOptions) Validate() []error {
@@ -94,9 +87,6 @@ func (o *GrafanaAggregatorOptions) ApplyTo(aggregatorConfig *aggregatorapiserver
 		return err
 	}
 	genericConfig.MergedResourceConfig = mergedResourceConfig
-
-	aggregatorConfig.ExtraConfig.ProxyClientCertFile = o.ProxyClientCertFile
-	aggregatorConfig.ExtraConfig.ProxyClientKeyFile = o.ProxyClientKeyFile
 
 	genericConfig.PostStartHooks = map[string]genericapiserver.PostStartHookConfigEntry{}
 

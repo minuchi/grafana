@@ -12,7 +12,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
@@ -55,11 +54,15 @@ func NewDataPlaneServiceRegistrationController(dataPlaneServiceInformer informer
 		queue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DataPlaneServiceRegistrationController"),
 	}
 
-	dataPlaneServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := dataPlaneServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addDataPlaneService,
 		UpdateFunc: c.updateDataPlaneService,
 		DeleteFunc: c.deleteDataPlaneService,
 	})
+
+	if err != nil {
+		klog.Errorf("Failed to register event handler for DataPlaneService: %v", err)
+	}
 
 	c.syncFn = c.sync
 
@@ -108,7 +111,7 @@ func (c *DataPlaneServiceRegistrationController) Run(stopCh <-chan struct{}, han
 		return true, nil
 	})
 	if err != nil {
-		runtime.HandleError(err)
+		utilruntime.HandleError(err)
 		return
 	}
 	close(handlerSyncedCh)

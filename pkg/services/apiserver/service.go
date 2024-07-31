@@ -368,7 +368,6 @@ func (s *service) start(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 	} else if s.features.IsEnabledGlobally(featuremgmt.FlagKubernetesAggregator) {
 		runningServer, err = s.startKubeAggregator(transport, aggregatorServer)
 		if err != nil {
@@ -431,7 +430,9 @@ func (s *service) startDataplaneAggregator(
 		},
 	}
 
-	s.options.GrafanaAggregatorOptions.ApplyTo(config, s.options.RecommendedOptions.Etcd)
+	if err := s.options.GrafanaAggregatorOptions.ApplyTo(config, s.options.RecommendedOptions.Etcd); err != nil {
+		return nil, err
+	}
 
 	completedConfig := config.Complete()
 

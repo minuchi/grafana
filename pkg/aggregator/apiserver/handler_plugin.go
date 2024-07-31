@@ -43,6 +43,16 @@ func newPluginHandler(
 		switch service.Type {
 		case aggregationv0alpha1.DataServiceType:
 			mux.Handle("POST "+proxyPath+"/namespaces/{namespace}/query", h.QueryDataHandler())
+		case aggregationv0alpha1.DiagnosticsServiceType:
+			fallthrough
+		case aggregationv0alpha1.StreamServiceType:
+			fallthrough
+		case aggregationv0alpha1.AdmissionControlServiceType:
+			fallthrough
+		case aggregationv0alpha1.ResourceServiceType:
+			fallthrough
+		default:
+			// no-op
 		}
 	}
 
