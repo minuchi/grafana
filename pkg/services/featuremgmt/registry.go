@@ -1368,6 +1368,13 @@ var (
 			Owner:       grafanaPartnerPluginsSquad,
 			Expression:  "true", // Enabled by default for now
 		},
+		{
+			Name:            "dataplaneAggregator",
+			Description:     "Enable dataplane aggregator",
+			Stage:           FeatureStageExperimental,
+			Owner:           grafanaAppPlatformSquad,
+			RequiresRestart: true,
+		},
 	}
 )
 
