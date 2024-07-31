@@ -166,3 +166,16 @@ type ReceiverList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []Receiver `json:"items"`
 }
+
+// region Routes
+
+// +genclient
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type Route struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              RouteSpec `json:"spec"`
+}
+
+// endregion Routes

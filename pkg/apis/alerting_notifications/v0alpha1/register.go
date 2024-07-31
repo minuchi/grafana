@@ -34,6 +34,11 @@ var (
 		func() runtime.Object { return &Receiver{} },
 		func() runtime.Object { return &ReceiverList{} },
 	)
+	RouteResourceInfo = common.NewResourceInfo(GROUP, VERSION,
+		"route", "route", "Route",
+		func() runtime.Object { return &Route{} },
+		func() runtime.Object { return &Route{} },
+	)
 	// SchemeGroupVersion is group version used to register these objects
 	SchemeGroupVersion = schema.GroupVersion{Group: GROUP, Version: VERSION}
 	// SchemaBuilder is used by standard codegen
@@ -54,6 +59,7 @@ func AddKnownTypesGroup(scheme *runtime.Scheme, g schema.GroupVersion) error {
 		&TimeIntervalList{},
 		&Receiver{},
 		&ReceiverList{},
+		&Route{},
 	)
 	metav1.AddToGroupVersion(scheme, g)
 
