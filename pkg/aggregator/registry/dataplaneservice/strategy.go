@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Provenance-includes-location: https://github.com/kubernetes/kube-aggregator/blob/master/pkg/registry/apiservice/strategy.go
+// Provenance-includes-license: Apache-2.0
+// Provenance-includes-copyright: The Kubernetes Authors.
+
 package dataplaneservice
 
 import (
@@ -22,11 +27,11 @@ type dataPlaneServiceStrategy struct {
 	names.NameGenerator
 }
 
-// apiServerStrategy must implement rest.RESTCreateUpdateStrategy
+// dataPlaneServiceStrategy must implement rest.RESTCreateUpdateStrategy
 var _ rest.RESTCreateUpdateStrategy = dataPlaneServiceStrategy{}
 var Strategy = dataPlaneServiceStrategy{}
 
-// NewStrategy creates a new apiServerStrategy.
+// NewStrategy creates a new dataPlaneServiceStrategy.
 func NewStrategy(typer runtime.ObjectTyper) rest.CreateUpdateResetFieldsStrategy {
 	return dataPlaneServiceStrategy{typer, names.SimpleNameGenerator}
 }
@@ -49,9 +54,9 @@ func (dataPlaneServiceStrategy) PrepareForCreate(ctx context.Context, obj runtim
 }
 
 func (dataPlaneServiceStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newAPIService := obj.(*aggregation.DataPlaneService)
-	oldAPIService := old.(*aggregation.DataPlaneService)
-	newAPIService.Status = oldAPIService.Status
+	newDataPlaneService := obj.(*aggregation.DataPlaneService)
+	oldDataPlaneService := old.(*aggregation.DataPlaneService)
+	newDataPlaneService.Status = oldDataPlaneService.Status
 }
 
 func (dataPlaneServiceStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
@@ -109,13 +114,13 @@ func (dataPlaneServiceStatusStrategy) GetResetFields() map[fieldpath.APIVersion]
 }
 
 func (dataPlaneServiceStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newAPIService := obj.(*aggregation.DataPlaneService)
-	oldAPIService := old.(*aggregation.DataPlaneService)
-	newAPIService.Spec = oldAPIService.Spec
-	newAPIService.Labels = oldAPIService.Labels
-	newAPIService.Annotations = oldAPIService.Annotations
-	newAPIService.Finalizers = oldAPIService.Finalizers
-	newAPIService.OwnerReferences = oldAPIService.OwnerReferences
+	newDataPlaneService := obj.(*aggregation.DataPlaneService)
+	oldDataPlaneService := old.(*aggregation.DataPlaneService)
+	newDataPlaneService.Spec = oldDataPlaneService.Spec
+	newDataPlaneService.Labels = oldDataPlaneService.Labels
+	newDataPlaneService.Annotations = oldDataPlaneService.Annotations
+	newDataPlaneService.Finalizers = oldDataPlaneService.Finalizers
+	newDataPlaneService.OwnerReferences = oldDataPlaneService.OwnerReferences
 }
 
 func (dataPlaneServiceStatusStrategy) AllowCreateOnUpdate() bool {
@@ -149,9 +154,9 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	return labels.Set(s.ObjectMeta.Labels), ToSelectableFields(s), nil
 }
 
-// MatchAPIService is the filter used by the generic etcd backend to watch events
+// MatchDataPlaneService is the filter used by the generic etcd backend to watch events
 // from etcd to clients of the apiserver only interested in specific labels/fields.
-func MatchAPIService(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+func MatchDataPlaneService(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:    label,
 		Field:    field,

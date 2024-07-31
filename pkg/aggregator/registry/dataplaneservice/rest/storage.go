@@ -13,7 +13,7 @@ import (
 	dataplaneservicestorage "github.com/grafana/grafana/pkg/aggregator/registry/dataplaneservice/storage"
 )
 
-// NewRESTStorage returns an APIGroupInfo object that will work against apiservice.
+// NewRESTStorage returns an APIGroupInfo object that will work against dataplaneservice.
 func NewRESTStorage(apiResourceConfigSource serverstorage.APIResourceConfigSource, restOptionsGetter generic.RESTOptionsGetter, shouldServeBeta bool) genericapiserver.APIGroupInfo {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(aggregation.GROUP, aggregatorscheme.Scheme, metav1.ParameterCodec, aggregatorscheme.Codecs)
 

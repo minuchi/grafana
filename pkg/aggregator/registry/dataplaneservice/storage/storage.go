@@ -28,7 +28,7 @@ func NewREST(scheme *runtime.Scheme, optsGetter generic.RESTOptionsGetter) *REST
 	store := &genericregistry.Store{
 		NewFunc:                   func() runtime.Object { return &aggregation.DataPlaneService{} },
 		NewListFunc:               func() runtime.Object { return &aggregation.DataPlaneServiceList{} },
-		PredicateFunc:             dataplaneservice.MatchAPIService,
+		PredicateFunc:             dataplaneservice.MatchDataPlaneService,
 		DefaultQualifiedResource:  aggregation.Resource("dataplaneservices"),
 		SingularQualifiedResource: aggregation.Resource("dataplaneservice"),
 
@@ -115,14 +115,14 @@ func NewStatusREST(scheme *runtime.Scheme, rest *REST) *StatusREST {
 	return &StatusREST{store: &statusStore}
 }
 
-// StatusREST implements the REST endpoint for changing the status of an APIService.
+// StatusREST implements the REST endpoint for changing the status of an DataPlaneService.
 type StatusREST struct {
 	store *genericregistry.Store
 }
 
 var _ = rest.Patcher(&StatusREST{})
 
-// New creates a new APIService object.
+// New creates a new DataPlaneService object.
 func (r *StatusREST) New() runtime.Object {
 	return &aggregation.DataPlaneService{}
 }
