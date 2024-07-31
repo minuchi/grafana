@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Provenance-includes-location: https://github.com/kubernetes/kube-aggregator/blob/master/pkg/apiserver/apiserver.go
+// Provenance-includes-license: Apache-2.0
+// Provenance-includes-copyright: The Kubernetes Authors.
+
 package apiserver
 
 import (
@@ -35,8 +40,6 @@ func init() {
 type ExtraConfig struct {
 	PluginClient          plugins.Client
 	PluginContextProvider PluginContextProvider
-	ProxyClientCertFile   string
-	ProxyClientKeyFile    string
 }
 
 type Config struct {
@@ -83,8 +86,7 @@ func (cfg *Config) Complete() CompletedConfig {
 		&cfg.ExtraConfig,
 	}
 
-	// the aggregator wires its own discovery mechanism
-	// TODO eventually collapse this by extracting all of the discovery out
+	// TODO: discovery currently deletegates to kube-aggregator
 	c.GenericConfig.EnableDiscovery = false
 
 	return CompletedConfig{&c}
@@ -120,7 +122,7 @@ func (c completedConfig) NewWithDelegate(delegationTarget genericapiserver.Deleg
 		PluginContextProvider: c.ExtraConfig.PluginContextProvider,
 	}
 
-	apiserviceRegistrationController := NewDataPlaneServiceRegistrationController(informerFactory.Aggregation().V0alpha1().DataPlaneServices(), s)
+	dataplaneServiceRegistrationController := NewDataPlaneServiceRegistrationController(informerFactory.Aggregation().V0alpha1().DataPlaneServices(), s)
 
 	apiGroupInfo := dataplaneservicerest.NewRESTStorage(c.GenericConfig.MergedResourceConfig, c.GenericConfig.RESTOptionsGetter, true)
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
@@ -133,7 +135,7 @@ func (c completedConfig) NewWithDelegate(delegationTarget genericapiserver.Deleg
 	})
 
 	s.GenericAPIServer.AddPostStartHookOrDie("dataplaneservice-registration-controller", func(context genericapiserver.PostStartHookContext) error {
-		go apiserviceRegistrationController.Run(context.StopCh, dataplaneServiceRegistrationControllerInitiated)
+		go dataplaneServiceRegistrationController.Run(context.StopCh, dataplaneServiceRegistrationControllerInitiated)
 		select {
 		case <-context.StopCh:
 		case <-dataplaneServiceRegistrationControllerInitiated:
@@ -182,13 +184,13 @@ func (s *GrafanaAggregator) AddDataPlaneService(dataplaneService *v0alpha1.DataP
 	return nil
 }
 
-func (s *GrafanaAggregator) RemoveDataPlaneService(apiServiceName string) {
-	version := v0alpha1helper.DataPlaneServiceNameToGroupVersion(apiServiceName)
+func (s *GrafanaAggregator) RemoveDataPlaneService(dataplaneServiceName string) {
+	version := v0alpha1helper.DataPlaneServiceNameToGroupVersion(dataplaneServiceName)
 
 	proxyPath := "/apis/dataplane/" + version.Group + "/" + version.Version
 	s.GenericAPIServer.Handler.NonGoRestfulMux.Unregister(proxyPath)
 	s.GenericAPIServer.Handler.NonGoRestfulMux.Unregister(proxyPath + "/")
-	delete(s.proxyHandlers, apiServiceName)
+	delete(s.proxyHandlers, dataplaneServiceName)
 
 	versions, exist := s.handledGroupVersions[version.Group]
 	if !exist {

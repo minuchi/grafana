@@ -1,11 +1,18 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Provenance-includes-location: https://github.com/kubernetes/kube-aggregator/blob/master/pkg/apiserver/apiservice_controller.go
+// Provenance-includes-license: Apache-2.0
+// Provenance-includes-copyright: The Kubernetes Authors.
+
 package apiserver
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
@@ -18,15 +25,15 @@ import (
 	listers "github.com/grafana/grafana/pkg/aggregator/generated/listers/aggregation/v0alpha1"
 )
 
-// APIHandlerManager defines the behaviour that an API handler should have.
-type APIHandlerManager interface {
+// DataPlaneHandlerManager defines the behaviour that an API handler should have.
+type DataPlaneHandlerManager interface {
 	AddDataPlaneService(dataPlaneService *v0alpha1.DataPlaneService) error
 	RemoveDataPlaneService(dataPlaneServiceName string)
 }
 
 // DataPlaneServiceRegistrationController is responsible for registering and removing API services.
 type DataPlaneServiceRegistrationController struct {
-	apiHandlerManager APIHandlerManager
+	dataPlaneHandlerManager DataPlaneHandlerManager
 
 	dataPlaneServiceLister listers.DataPlaneServiceLister
 	dataPlaneServiceSynced cache.InformerSynced
@@ -40,12 +47,12 @@ type DataPlaneServiceRegistrationController struct {
 var _ dynamiccertificates.Listener = &DataPlaneServiceRegistrationController{}
 
 // NewDataPlaneServiceRegistrationController returns a new DataPlaneServiceRegistrationController.
-func NewDataPlaneServiceRegistrationController(dataPlaneServiceInformer informers.DataPlaneServiceInformer, apiHandlerManager APIHandlerManager) *DataPlaneServiceRegistrationController {
+func NewDataPlaneServiceRegistrationController(dataPlaneServiceInformer informers.DataPlaneServiceInformer, dataPlaneHandlerManager DataPlaneHandlerManager) *DataPlaneServiceRegistrationController {
 	c := &DataPlaneServiceRegistrationController{
-		apiHandlerManager:      apiHandlerManager,
-		dataPlaneServiceLister: dataPlaneServiceInformer.Lister(),
-		dataPlaneServiceSynced: dataPlaneServiceInformer.Informer().HasSynced,
-		queue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DataPlaneServiceRegistrationController"),
+		dataPlaneHandlerManager: dataPlaneHandlerManager,
+		dataPlaneServiceLister:  dataPlaneServiceInformer.Lister(),
+		dataPlaneServiceSynced:  dataPlaneServiceInformer.Informer().HasSynced,
+		queue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "DataPlaneServiceRegistrationController"),
 	}
 
 	dataPlaneServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -62,14 +69,14 @@ func NewDataPlaneServiceRegistrationController(dataPlaneServiceInformer informer
 func (c *DataPlaneServiceRegistrationController) sync(key string) error {
 	dataPlaneService, err := c.dataPlaneServiceLister.Get(key)
 	if apierrors.IsNotFound(err) {
-		c.apiHandlerManager.RemoveDataPlaneService(key)
+		c.dataPlaneHandlerManager.RemoveDataPlaneService(key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	return c.apiHandlerManager.AddDataPlaneService(dataPlaneService)
+	return c.dataPlaneHandlerManager.AddDataPlaneService(dataPlaneService)
 }
 
 // Run starts DataPlaneServiceRegistrationController which will process all registration requests until stopCh is closed.
@@ -85,24 +92,24 @@ func (c *DataPlaneServiceRegistrationController) Run(stopCh <-chan struct{}, han
 	}
 
 	/// initially sync all DataPlaneServices to make sure the proxy handler is complete
-	if err := wait.PollImmediateUntil(time.Second, func() (bool, error) {
+	ctx := wait.ContextForChannel(stopCh)
+	err := wait.PollUntilContextCancel(ctx, time.Second, true, func(context.Context) (bool, error) {
 		services, err := c.dataPlaneServiceLister.List(labels.Everything())
 		if err != nil {
 			utilruntime.HandleError(fmt.Errorf("failed to initially list DataPlaneServices: %v", err))
 			return false, nil
 		}
 		for _, s := range services {
-			if err := c.apiHandlerManager.AddDataPlaneService(s); err != nil {
+			if err := c.dataPlaneHandlerManager.AddDataPlaneService(s); err != nil {
 				utilruntime.HandleError(fmt.Errorf("failed to initially sync DataPlaneService %s: %v", s.Name, err))
 				return false, nil
 			}
 		}
 		return true, nil
-	}, stopCh); err == wait.ErrWaitTimeout {
-		utilruntime.HandleError(fmt.Errorf("timed out waiting for proxy handler to initialize"))
+	})
+	if err != nil {
+		runtime.HandleError(err)
 		return
-	} else if err != nil {
-		panic(fmt.Errorf("unexpected error: %v", err))
 	}
 	close(handlerSyncedCh)
 
@@ -178,8 +185,6 @@ func (c *DataPlaneServiceRegistrationController) deleteDataPlaneService(obj inte
 	c.enqueueInternal(castObj)
 }
 
-// Enqueue queues all data plane services to be rehandled.
-// This method is used by the controller to notify when the proxy cert content changes.
 func (c *DataPlaneServiceRegistrationController) Enqueue() {
 	dataPlaneServices, err := c.dataPlaneServiceLister.List(labels.Everything())
 	if err != nil {

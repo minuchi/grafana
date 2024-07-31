@@ -1,18 +1,7 @@
-/*
-Copyright 2016 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-License-Identifier: AGPL-3.0-only
+// Provenance-includes-location: https://github.com/kubernetes/kube-aggregator/blob/master/pkg/apis/apiregistration/v1/helper/helpers.go
+// Provenance-includes-license: Apache-2.0
+// Provenance-includes-copyright: The Kubernetes Authors.
 
 package helper
 
@@ -25,17 +14,17 @@ import (
 
 // DataPlaneServiceNameToGroupVersion returns the GroupVersion for a given dataplaneServiceNam.  The name
 // must be valid, but any object you get back from an informer will be valid.
-func DataPlaneServiceNameToGroupVersion(apiServiceName string) schema.GroupVersion {
-	tokens := strings.SplitN(apiServiceName, ".", 2)
+func DataPlaneServiceNameToGroupVersion(dataplaneServiceName string) schema.GroupVersion {
+	tokens := strings.SplitN(dataplaneServiceName, ".", 2)
 	return schema.GroupVersion{Group: tokens[1], Version: tokens[0]}
 }
 
 // SetDataPlaneServiceCondition sets the status condition.  It either overwrites the existing one or
 // creates a new one
-func SetDataPlaneServiceCondition(apiService *v0alpha1.DataPlaneService, newCondition v0alpha1.DataPlaneServiceCondition) {
-	existingCondition := GetDataPlaneServiceConditionByType(apiService, newCondition.Type)
+func SetDataPlaneServiceCondition(dataplaneService *v0alpha1.DataPlaneService, newCondition v0alpha1.DataPlaneServiceCondition) {
+	existingCondition := GetDataPlaneServiceConditionByType(dataplaneService, newCondition.Type)
 	if existingCondition == nil {
-		apiService.Status.Conditions = append(apiService.Status.Conditions, newCondition)
+		dataplaneService.Status.Conditions = append(dataplaneService.Status.Conditions, newCondition)
 		return
 	}
 
@@ -49,16 +38,16 @@ func SetDataPlaneServiceCondition(apiService *v0alpha1.DataPlaneService, newCond
 }
 
 // IsDataPlaneServiceConditionTrue indicates if the condition is present and strictly true
-func IsDataPlaneServiceConditionTrue(apiService *v0alpha1.DataPlaneService, conditionType v0alpha1.DataPlaneServiceConditionType) bool {
-	condition := GetDataPlaneServiceConditionByType(apiService, conditionType)
+func IsDataPlaneServiceConditionTrue(dataplaneService *v0alpha1.DataPlaneService, conditionType v0alpha1.DataPlaneServiceConditionType) bool {
+	condition := GetDataPlaneServiceConditionByType(dataplaneService, conditionType)
 	return condition != nil && condition.Status == v0alpha1.ConditionTrue
 }
 
 // GetDataPlaneServiceConditionByType gets an *DataPlaneServiceCondition by DataPlaneServiceConditionType if present
-func GetDataPlaneServiceConditionByType(apiService *v0alpha1.DataPlaneService, conditionType v0alpha1.DataPlaneServiceConditionType) *v0alpha1.DataPlaneServiceCondition {
-	for i := range apiService.Status.Conditions {
-		if apiService.Status.Conditions[i].Type == conditionType {
-			return &apiService.Status.Conditions[i]
+func GetDataPlaneServiceConditionByType(dataplaneService *v0alpha1.DataPlaneService, conditionType v0alpha1.DataPlaneServiceConditionType) *v0alpha1.DataPlaneServiceCondition {
+	for i := range dataplaneService.Status.Conditions {
+		if dataplaneService.Status.Conditions[i].Type == conditionType {
+			return &dataplaneService.Status.Conditions[i]
 		}
 	}
 	return nil
