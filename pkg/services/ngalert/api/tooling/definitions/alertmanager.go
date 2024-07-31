@@ -997,3 +997,11 @@ type RoutingTree struct {
 	definition.Route
 	Version string `json:"version"`
 }
+
+func (r RoutingTree) ResourceType() string {
+	return "route"
+}
+
+func (r RoutingTree) ResourceID() string {
+	return ""
+}
