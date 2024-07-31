@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	data "github.com/grafana/grafana-plugin-sdk-go/experimental/apis/data/v0alpha1"
+	"go.opentelemetry.io/otel/attribute"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
-	endpointmetrics "k8s.io/apiserver/pkg/endpoints/metrics"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/klog/v2"
+	"k8s.io/component-base/tracing"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	aggregationv0alpha1 "github.com/grafana/grafana/pkg/aggregator/apis/aggregation/v0alpha1"
@@ -33,33 +33,24 @@ type proxyHandlingInfo struct {
 	handler *pluginHandler
 }
 
-func proxyError(w http.ResponseWriter, req *http.Request, error string, code int) {
-	http.Error(w, error, code)
-
-	ctx := req.Context()
-	info, ok := genericapirequest.RequestInfoFrom(ctx)
-	if !ok {
-		klog.Warning("no RequestInfo found in the context")
-		return
-	}
-	endpointmetrics.RecordRequestTermination(req, info, "grafana-aggregator", code)
-}
-
 func (r *proxyHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	value := r.handlingInfo.Load()
 	if value == nil {
 		r.localDelegate.ServeHTTP(w, req)
 		return
 	}
+
+	ctx, span := tracing.Start(
+		req.Context(),
+		"grafana-aggregator",
+		attribute.String("k8s.dataplaneservice.name", value.(proxyHandlingInfo).name),
+		attribute.String("http.request.method", req.Method),
+		attribute.String("http.request.url", req.URL.String()),
+	)
+	// log if the span has not ended after a minute
+	defer span.End(time.Minute)
 	handlingInfo := value.(proxyHandlingInfo)
-
-	_, ok := genericapirequest.UserFrom(req.Context())
-	if !ok {
-		proxyError(w, req, "missing user", http.StatusInternalServerError)
-		return
-	}
-
-	handlingInfo.handler.ServeHTTP(w, req)
+	handlingInfo.handler.ServeHTTP(w, req.WithContext(ctx))
 }
 
 // these methods provide locked access to fields
@@ -92,7 +83,8 @@ func (r *responder) Object(statusCode int, obj runtime.Object) {
 	responsewriters.WriteRawJSON(statusCode, obj, r.w)
 }
 
-func (r *responder) Error(_ http.ResponseWriter, _ *http.Request, err error) {
+func (r *responder) Error(_ http.ResponseWriter, req *http.Request, err error) {
+	tracing.SpanFromContext(req.Context()).RecordError(err)
 	http.Error(r.w, err.Error(), http.StatusServiceUnavailable)
 }
 
@@ -139,8 +131,10 @@ func (h *pluginHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (h *pluginHandler) QueryDataHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		responder := &responder{w: w}
 		ctx := req.Context()
+		span := tracing.SpanFromContext(ctx)
+		span.AddEvent("QueryDataHandler")
+		responder := &responder{w: w}
 		dqr := data.QueryDataRequest{}
 		err := web.Bind(req, &dqr)
 		if err != nil {
@@ -153,7 +147,10 @@ func (h *pluginHandler) QueryDataHandler() http.HandlerFunc {
 			responder.Error(w, req, err)
 			return
 		}
-
+		span.AddEvent("GetPluginContext",
+			attribute.String("datasource.uid", dsRef.UID),
+			attribute.String("datasource.type", dsRef.Type),
+		)
 		pluginContext, err := h.pluginContextProvider.GetPluginContext(ctx, dsRef.Type, dsRef.UID)
 		if err != nil {
 			responder.Error(w, req, fmt.Errorf("unable to get plugin context: %w", err))
@@ -166,6 +163,7 @@ func (h *pluginHandler) QueryDataHandler() http.HandlerFunc {
 		}
 
 		ctx = backend.WithGrafanaConfig(ctx, pluginContext.GrafanaConfig)
+		span.AddEvent("QueryData start", attribute.Int("queries", len(queries)))
 		rsp, err := h.client.QueryData(ctx, &backend.QueryDataRequest{
 			Queries:       queries,
 			PluginContext: pluginContext,
@@ -174,7 +172,9 @@ func (h *pluginHandler) QueryDataHandler() http.HandlerFunc {
 			responder.Error(w, req, err)
 			return
 		}
-		responder.Object(query.GetResponseCode(rsp),
+		statusCode := query.GetResponseCode(rsp)
+		span.AddEvent("QueryData end", attribute.Int("http.response.status_code", statusCode))
+		responder.Object(statusCode,
 			&query.QueryDataResponse{QueryDataResponse: *rsp},
 		)
 	}

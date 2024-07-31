@@ -45,13 +45,6 @@ type DataPlaneServiceList struct {
 	Items []DataPlaneService
 }
 
-// ConnectionType defines the type of connection to the proxied service.
-type ConnectionType string
-
-const (
-	GRPC ConnectionType = "grpc"
-)
-
 // ServiceType defines the type of services the proxied service provides.
 // +enum
 type ServiceType string
