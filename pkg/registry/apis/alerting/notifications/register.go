@@ -13,10 +13,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/kube-openapi/pkg/common"
+	"k8s.io/kube-openapi/pkg/spec3"
 
 	notificationsModels "github.com/grafana/grafana/pkg/apis/alerting_notifications/v0alpha1"
 	grafanarest "github.com/grafana/grafana/pkg/apiserver/rest"
 	receiver "github.com/grafana/grafana/pkg/registry/apis/alerting/notifications/receiver"
+	"github.com/grafana/grafana/pkg/registry/apis/alerting/notifications/route"
 	timeInterval "github.com/grafana/grafana/pkg/registry/apis/alerting/notifications/timeinterval"
 	"github.com/grafana/grafana/pkg/services/accesscontrol"
 	"github.com/grafana/grafana/pkg/services/apiserver/builder"
@@ -85,15 +87,43 @@ func (t NotificationsAPIBuilder) GetAPIGroupInfo(
 		return nil, fmt.Errorf("failed to initialize receiver storage: %w", err)
 	}
 
+	routeStorage, err := route.NewStorage(t.ng.Api.Policies, t.namespacer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize route storage: %w", err)
+	}
+
 	apiGroupInfo.VersionedResourcesStorageMap[notificationsModels.VERSION] = map[string]rest.Storage{
 		notificationsModels.TimeIntervalResourceInfo.StoragePath(): intervals,
 		notificationsModels.ReceiverResourceInfo.StoragePath():     recvStorage,
+		notificationsModels.RouteResourceInfo.StoragePath():        routeStorage,
 	}
 	return &apiGroupInfo, nil
 }
 
 func (t NotificationsAPIBuilder) GetOpenAPIDefinitions() common.GetOpenAPIDefinitions {
 	return notificationsModels.GetOpenAPIDefinitions
+}
+
+// PostProcessOpenAPI is a hook to alter OpenAPI3 specification of the API server.
+func (b *NotificationsAPIBuilder) PostProcessOpenAPI(oas *spec3.OpenAPI) (*spec3.OpenAPI, error) {
+	// The plugin description
+	oas.Info.Description = "Grafana Alerting Notification resources"
+
+	// The root api URL
+	root := "/apis/" + b.GetGroupVersion().String() + "/"
+
+	// Hide the ability to list or watch across all tenants
+	delete(oas.Paths.Paths, root+notificationsModels.RouteResourceInfo.GroupResource().Resource)
+
+	// delete all named resources because route is a singleton.
+	delete(oas.Paths.Paths, root+"namespaces/{namespace}/"+notificationsModels.RouteResourceInfo.GroupResource().Resource+"/{name}")
+
+	// The root API discovery list
+	sub := oas.Paths.Paths[root]
+	if sub != nil && sub.Get != nil {
+		sub.Get.Tags = []string{"API Discovery"} // sorts first in the list
+	}
+	return oas, nil
 }
 
 func (t NotificationsAPIBuilder) GetAPIRoutes() *builder.APIRoutes {
@@ -108,6 +138,8 @@ func (t NotificationsAPIBuilder) GetAuthorizer() authorizer.Authorizer {
 				return timeInterval.Authorize(ctx, t.authz, a)
 			case notificationsModels.ReceiverResourceInfo.GroupResource().Resource:
 				return receiver.Authorize(ctx, t.authz, a)
+			case notificationsModels.RouteResourceInfo.GroupResource().Resource:
+				return route.Authorize(ctx, t.authz, a)
 			}
 			return authorizer.DecisionNoOpinion, "", nil
 		})
