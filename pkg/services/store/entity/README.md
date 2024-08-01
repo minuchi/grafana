@@ -27,8 +27,6 @@ protocol = https
 [feature_toggles]
 ; enable unified storage
 unifiedStorage = true
-; enable k8s apiserver
-grafanaAPIServer = true
 ; store json id token in context
 idForwarding = true
 
