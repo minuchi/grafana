@@ -213,6 +213,8 @@ func Convert_aggregation_DataPlaneServiceStatus_To_v0alpha1_DataPlaneServiceStat
 
 func autoConvert_v0alpha1_Service_To_aggregation_Service(in *Service, out *aggregation.Service, s conversion.Scope) error {
 	out.Type = aggregation.ServiceType(in.Type)
+	out.Resource = in.Resource
+	out.Path = in.Path
 	return nil
 }
 
@@ -223,6 +225,8 @@ func Convert_v0alpha1_Service_To_aggregation_Service(in *Service, out *aggregati
 
 func autoConvert_aggregation_Service_To_v0alpha1_Service(in *aggregation.Service, out *Service, s conversion.Scope) error {
 	out.Type = ServiceType(in.Type)
+	out.Resource = in.Resource
+	out.Path = in.Path
 	return nil
 }
 

@@ -266,16 +266,30 @@ func schema_aggregator_apis_aggregation_v0alpha1_Service(ref common.ReferenceCal
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Service defines the type of service the proxied service provides.\n\nCurrently this only includes the service type, but it can be extended in the future to include additional configuration options if necessary.",
+				Description: "Service defines the type of service the proxied service provides.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Possible enum values:\n - `\"admission\"`\n - `\"data\"`\n - `\"diagnostics\"`\n - `\"resource\"`\n - `\"stream\"`",
+							Description: "Possible enum values:\n - `\"admission\"`\n - `\"customroute\"`\n - `\"data\"`\n - `\"diagnostics\"`\n - `\"stream\"`\n - `\"subresource\"`",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
-							Enum:        []interface{}{"admission", "data", "diagnostics", "resource", "stream"},
+							Enum:        []interface{}{"admission", "customroute", "data", "diagnostics", "stream", "subresource"},
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is used by the SubResourceServiceType to specify the resource to proxy.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"path": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Path is used by the CustomRouteServiceType and SubResourceServiceType to specify the path to the endpoint.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

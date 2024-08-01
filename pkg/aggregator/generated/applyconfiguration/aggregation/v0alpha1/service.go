@@ -11,7 +11,9 @@ import (
 // ServiceApplyConfiguration represents an declarative configuration of the Service type for use
 // with apply.
 type ServiceApplyConfiguration struct {
-	Type *v0alpha1.ServiceType `json:"type,omitempty"`
+	Type     *v0alpha1.ServiceType `json:"type,omitempty"`
+	Resource *string               `json:"resource,omitempty"`
+	Path     *string               `json:"path,omitempty"`
 }
 
 // ServiceApplyConfiguration constructs an declarative configuration of the Service type for use with
@@ -25,5 +27,21 @@ func Service() *ServiceApplyConfiguration {
 // If called multiple times, the Type field is set to the value of the last call.
 func (b *ServiceApplyConfiguration) WithType(value v0alpha1.ServiceType) *ServiceApplyConfiguration {
 	b.Type = &value
+	return b
+}
+
+// WithResource sets the Resource field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Resource field is set to the value of the last call.
+func (b *ServiceApplyConfiguration) WithResource(value string) *ServiceApplyConfiguration {
+	b.Resource = &value
+	return b
+}
+
+// WithPath sets the Path field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Path field is set to the value of the last call.
+func (b *ServiceApplyConfiguration) WithPath(value string) *ServiceApplyConfiguration {
+	b.Path = &value
 	return b
 }

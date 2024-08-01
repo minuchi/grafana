@@ -49,7 +49,9 @@ func newPluginHandler(
 			fallthrough
 		case aggregationv0alpha1.AdmissionControlServiceType:
 			fallthrough
-		case aggregationv0alpha1.ResourceServiceType:
+		case aggregationv0alpha1.SubResourceServiceType:
+			fallthrough
+		case aggregationv0alpha1.CustomRouteServiceType:
 			fallthrough
 		default:
 			// no-op

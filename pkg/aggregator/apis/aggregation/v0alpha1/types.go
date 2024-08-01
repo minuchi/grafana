@@ -29,11 +29,14 @@ type DataPlaneServiceSpec struct {
 }
 
 // Service defines the type of service the proxied service provides.
-//
-// Currently this only includes the service type, but it can be extended in the future to include
-// additional configuration options if necessary.
 type Service struct {
 	Type ServiceType `json:"type"`
+	// Resource is used by the SubResourceServiceType to specify the resource to proxy.
+	// +optional
+	Resource string `json:"resource,omitempty"`
+	// Path is used by the CustomRouteServiceType and SubResourceServiceType to specify the path to the endpoint.
+	// +optional
+	Path string `json:"path,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -54,8 +57,9 @@ const (
 	AdmissionControlServiceType ServiceType = "admission"
 	DiagnosticsServiceType      ServiceType = "diagnostics"
 	DataServiceType             ServiceType = "data"
-	ResourceServiceType         ServiceType = "resource"
 	StreamServiceType           ServiceType = "stream"
+	SubResourceServiceType      ServiceType = "subresource"
+	CustomRouteServiceType      ServiceType = "customroute"
 )
 
 // ConditionStatus indicates the status of a condition (true, false, or unknown).
