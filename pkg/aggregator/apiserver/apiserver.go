@@ -117,6 +117,7 @@ func (c completedConfig) NewWithDelegate(delegationTarget genericapiserver.Deleg
 		GenericAPIServer:      genericServer,
 		RegistrationInformers: informerFactory,
 		delegateHandler:       delegationTarget.UnprotectedHandler(),
+		handledGroupVersions:  map[string]sets.Set[string]{},
 		proxyHandlers:         map[string]*proxyHandler{},
 		PluginClient:          c.ExtraConfig.PluginClient,
 		PluginContextProvider: c.ExtraConfig.PluginContextProvider,
